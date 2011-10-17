@@ -1,0 +1,32 @@
+Abstract:
+========
+    This bashscript downloads a file from the ARD-Mediathek (see
+    http://www.ard-mediathek.de). This site contains most of the movies and
+    shows which were broadcasted within the last seven days on the German tv
+    station "ARD". 
+    The script automatically selects the highest available quality for download,
+    so if available it fetches the HD version. It also converts the downloaded
+    files from the original Flash Video format to a more appropriate MKV or MP4
+    format.
+
+Usage:
+======
+    ./ard [URL]
+    Where [URL] is a url from the ard-mediathek linking to a movie. It can be
+    recognized by a 'documentId' in its parameters.
+
+Requirements:
+============
+    - rtmpdump (Ubuntu-Package 'rtmpdump')
+    - curl (Ubuntu-Package 'curl')
+    - ffmpeg (Ubuntu-Package 'ffmpeg')
+
+Configuration:
+=============
+    The first two variables in the script can be used to configure its
+    behaviour:
+        - 'targetdir': The directory where the script should place the
+          downloaded files. This directory must exist and must be writeable.
+        - 'targettype': The filetype of the downloaded file. The file is
+          converted on the fly while downloading to this format. Tested values
+          are: 'mkv' and 'mp4'.

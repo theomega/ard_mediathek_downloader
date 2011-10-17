@@ -1,0 +1,68 @@
+#!/bin/bash
+"""
+    ard-mediathek-downloader - A downloader for the german ard-mediathek
+    Copyright (C) 2011  Dominik Bruhn
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+
+
+#Configuration:
+targetdir="${HOME}/Downloads/ard/"
+targettype="mp4"    #Could also be 'mkv'
+#=============
+
+if [ ! -d "$targetdir" ]; then
+  echo "Targetdir $targetdir does not exist"
+  exit 1
+fi 
+
+if [ ! -e "$targetdir" ]; then
+  echo "Targetdir $targetdir is not writeable"
+  exit 1
+fi
+
+url="$1"
+if [ -z "$url" ]; then
+  echo "First parameter must be a url from the 'ARD-Mediathek'"
+  exit 2
+fi
+
+echo "Extracting HD Movie Param"
+mfile=$(curl -s "$url" | grep '0, 2, \"rtmp://vod.daserste.de/ardfs/\"' | grep -oE "mp4:(.*).f4v?")
+
+if [ -z "$mfile" ]; then
+  echo "Could not find a mp4 url"
+  exit 1
+fi
+
+title=$(curl -s "$url" | grep -oE '<title>(.*)</title>' | sed 's/<title>ARD Mediathek: \(.*\)<\/title>/\1/g' | sed 's/ | Das Erste//g')
+ofilename=$(echo "$title" | tr -cd "A-Za-z0-9_ -")
+fifo="/tmp/${ofilename}.flv"
+ofile="$targetdir/${ofilename}.${targettype}"
+
+echo "Downloading $url"
+rm -f "$fifo"
+rm -f "$ofile"
+mkfifo "$fifo"
+
+rtmpdump -r "rtmp://vod.daserste.de:1935/ardfs/" -a "ardfs/" \
+  -f "WIN 10,0,42,34" \
+  -W "http://www.ardmediathek.de/ard/static/player/swf/Aardvark.swf" \
+  -t "rtmp://vod.daserste.de:1935/ardfs/" \
+  -y "$mfile" \
+  -o "$fifo" &
+
+ffmpeg -vcodec copy -acodec copy -y -i "$fifo" "$ofile"
