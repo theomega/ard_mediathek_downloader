@@ -37,29 +37,42 @@ if [ -z "$url" ]; then
   exit 2
 fi
 
+htmldata=$(curl -s "$url")
+
 echo "Extracting HD Movie Param"
-mfile=$(curl -s "$url" | grep '0, 2, \"rtmp://vod.daserste.de/ardfs/\"' | grep -oE "mp4:(.*).f4v?")
 
-if [ -z "$mfile" ]; then
-  echo "Could not find a mp4 url"
-  exit 1
-fi
+mline=$(echo "$htmldata" | grep "mediaCollection.addMediaStream(0, 2, ")
+vod=$(echo "$mline" | grep -oE '"rtmp(.*)",')
+vod=${vod:1:-2}
+vod_r=$(echo "$vod" | cut --delimiter="/" -f 1-3)
+vod_a=$(echo "$vod" | cut --delimiter="/" -f 4-)
 
-title=$(curl -s "$url" | grep -oE '<title>(.*)</title>' | sed 's/<title>ARD Mediathek: \(.*\)<\/title>/\1/g' | sed 's/ | Das Erste//g')
-ofilename=$(echo "$title" | tr -cd "A-Za-z0-9_ -")
+path=$(echo "$mline" | grep -oE '"mp4:(.*)"\);')
+path=${path:1:-3}
+
+title=$(echo "$htmldata" | grep -oE '<title>(.*)</title>' | sed 's/<title>ARD Mediathek: \(.*\)<\/title>/\1/g' | sed 's/ | Das Erste//g')
+ofilename=$(echo "$title" | tr -cd "A-Za-z0-9äöüÄÖÜ_ -")
 fifo="/tmp/${ofilename}.flv"
 ofile="$targetdir/${ofilename}.${targettype}"
+
+#Debugging
+echo "Extracted Download-Params: "
+echo " -VOD: $vod"
+echo " -VOD_R: $vod_r"
+echo " -VOD_A: $vod_a"
+echo " -PATH: $path"
+echo " -FNAME: $ofilename"
 
 echo "Downloading $url"
 rm -f "$fifo"
 rm -f "$ofile"
 mkfifo "$fifo"
 
-rtmpdump -r "rtmp://vod.daserste.de:1935/ardfs/" -a "ardfs/" \
+rtmpdump -r "$vod" -a "$vod_a" \
   -f "WIN 10,0,42,34" \
   -W "http://www.ardmediathek.de/ard/static/player/swf/Aardvark.swf" \
-  -t "rtmp://vod.daserste.de:1935/ardfs/" \
-  -y "$mfile" \
+  -t "$vod" \
+  -y "$path" \
   -o "$fifo" &
 
 ffmpeg -vcodec copy -acodec copy -y -i "$fifo" "$ofile"
