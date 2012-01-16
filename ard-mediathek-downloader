@@ -41,7 +41,7 @@ htmldata=$(curl -s "$url")
 
 echo "Extracting HD Movie Param"
 
-mline=$(echo "$htmldata" | grep "mediaCollection.addMediaStream(0, 2, ")
+mline=$(echo "$htmldata" | grep "mediaCollection.addMediaStream(0, " | tail -n 1)
 vod=$(echo "$mline" | grep -oE '"rtmp(.*)",')
 vod=${vod:1:-2}
 vod_r=$(echo "$vod" | cut --delimiter="/" -f 1-3)
