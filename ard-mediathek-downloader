@@ -49,8 +49,9 @@ vod=${vod:1:-1}
 path=$(echo "$mline" | grep -oE '"mp4:([^\"]*)"')
 path=${path:1:-1}
 
-title=$(echo "$htmldata" | grep -oE '<title>(.*)</title>' | sed 's/<title>ARD Mediathek: \(.*\)<\/title>/\1/g' | sed 's/ | Das Erste//g')
+title=$(echo "$htmldata" | grep -oE '<title>(.*)</title>' | sed 's/<title>\(ARD Mediathek: \|Das Erste Mediathek \[ARD\] - \)\(.*\)<\/title>/\2/g' | sed 's/ | Das Erste//g')
 ofilename=$(echo "$title" | tr -cd "A-Za-z0-9äöüÄÖÜ_ -")
+ofilename=${ofilename:0:100}
 fifo="/tmp/${ofilename}.flv"
 ofile="$targetdir/${ofilename}.${targettype}"
 
@@ -58,7 +59,12 @@ ofile="$targetdir/${ofilename}.${targettype}"
 echo "Extracted Download-Params: "
 echo " -VOD: $vod"
 echo " -PATH: $path"
+echo " -Title: $title"
 echo " -FNAME: $ofilename"
+
+if [ "x$2" == "x--dry-run" ]; then
+  exit 2
+fi
 
 echo "Downloading $url"
 rm -f "$fifo"
